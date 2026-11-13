@@ -48,8 +48,10 @@
     return { k: 'soon', label: `بعد ${diff} يومًا` };
   }
 
-  // خط Milan يدمج «فن» فتنقرأ «فني» كأنها «في»؛ الكشيدة تصلح الشكل
-  const milanFix = (t) => String(t ?? '').replace(/فن(?=[\u0620-\u064A])/g, 'فنـ');
+  // في خط Milan تتلاصق «فني» فتنقرأ «في»؛ الكشيدة بين الحروف توضّحها: «فـنـي»
+  const milanFix = (t) => String(t ?? '').replace(/فن(?=[\u0620-\u064A])/g, 'فـنـ');
+  const WA_ICON = '<svg class="ico" aria-hidden="true"><use href="#i-wa"/></svg>';
+  const channelUrl = () => C.whatsappChannel || '';
 
   // متاح لملف التذكرة
   window.RiyashUtil = { dateParts, timeRange, to12, esc, milanFix };
@@ -123,6 +125,7 @@
     let action;
     if (pastGrace) action = `<span class="soon">انتهى اللقاء</span>`;
     else if (s.link) action = `<a class="btn btn-grad" href="${esc(s.link)}" target="_blank" rel="noopener">دخول اللقاء</a>`;
+    else if (channelUrl()) action = `<a class="btn btn-grad btn-wa" href="${esc(channelUrl())}" target="_blank" rel="noopener">${WA_ICON}رابط اللقاء في قناة واتساب</a>`;
     else action = `<span class="soon">رابط اللقاء قريبًا</span>`;
     return action;
   }
@@ -156,13 +159,13 @@
     if (!el || !C.sessions) return;
     const idx = C.sessions.findIndex((s) => sessionTimes(s).end > now);
     if (idx === -1) {
-      el.innerHTML = 'انتهت السلسلة. تابع <a href="#channel">قناة رِياش</a> للفعاليات الجاية.';
+      el.innerHTML = `انتهت السلسلة. تابع <a href="${esc(channelUrl() || '#channel')}" target="_blank" rel="noopener">قناة رِياش</a> للفعاليات الجاية.`;
     } else {
       const s = C.sessions[idx];
       const st = status(s, now);
       const p = dateParts(s.date);
       el.innerHTML = st.k === 'live'
-        ? `<span class="pulse"></span> مباشر الآن: <b>${esc(s.title)}</b> <a href="#session-${idx + 1}">ادخل</a>`
+        ? `<span class="pulse"></span> مباشر الآن: <b>${esc(s.title)}</b> <a href="${esc(s.link || channelUrl() || '#session-' + (idx + 1))}" target="_blank" rel="noopener">${s.link ? 'ادخل' : 'الرابط في القناة'}</a>`
         : `اللقاء الجاي: <b>${p.day} ${p.d} ${p.month}</b> · ${timeRange(s)}`;
     }
     el.hidden = false;
@@ -170,11 +173,19 @@
 
   /* ---------- قناة واتساب ---------- */
   function renderChannel() {
+    const url = channelUrl();
     const box = $('#channelAction');
-    if (!box) return;
-    box.innerHTML = C.whatsappChannel
-      ? `<a class="btn btn-grad" href="${esc(C.whatsappChannel)}" target="_blank" rel="noopener">تابع القناة</a>`
-      : `<span class="soon">رابط القناة قريبًا</span>`;
+    if (box) {
+      box.innerHTML = url
+        ? `<a class="btn btn-grad btn-wa btn-lg" href="${esc(url)}" target="_blank" rel="noopener">${WA_ICON}تابع قناة رِياش</a>`
+        : `<span class="soon">رابط القناة قريبًا</span>`;
+    }
+    // كل روابط «رابط اللقاء» في الصفحة تودّي للقناة
+    if (url) {
+      document.querySelectorAll('[data-wa]').forEach((a) => {
+        a.href = url; a.target = '_blank'; a.rel = 'noopener';
+      });
+    }
   }
 
   function renderHandle() {
